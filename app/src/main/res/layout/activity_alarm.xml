@@ -1,0 +1,8 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="24dp" android:background="#FFF4E5">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="WAKE UP" android:textSize="40sp" android:textStyle="bold" android:textColor="#111111" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:text="Solve: 17 + 26" android:textSize="22sp" />
+    <EditText android:id="@+id/answer" android:layout_width="180dp" android:layout_height="wrap_content" android:inputType="number" android:hint="Answer" />
+    <Button android:id="@+id/dismiss" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dismiss alarm" />
+    <TextView android:id="@+id/error" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#B00020" />
+</LinearLayout>
+
