@@ -6,9 +6,10 @@ import android.content.Intent;
 
 public class AlarmReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context, Intent intent) {
-        Intent screen = new Intent(context, AlarmActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        context.startActivity(screen);
+        int id = intent.getIntExtra("alarmId", -1);
+        if (id < 0) return;
+        AlarmStore.onTriggered(context, id);
+        Intent service = new Intent(context, AlarmService.class).setAction(AlarmService.ACTION_START).putExtra("alarmId", id);
+        context.startForegroundService(service);
     }
 }
-
