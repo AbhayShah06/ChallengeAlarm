@@ -27,6 +27,7 @@ public class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(24), dp(24), dp(24), dp(16)); root.setBackgroundColor(0xff101214);
         TextView title = new TextView(this); title.setText("Challenge Alarm"); title.setTextSize(28); title.setTextColor(0xfff4f4f4); title.setTypeface(null, android.graphics.Typeface.BOLD); root.addView(title);
         status = new TextView(this); status.setTextSize(14); status.setPadding(0, dp(8), 0, dp(8)); root.addView(status);
+        UpdateManager.attach(this, root);
         Button add = new Button(this); add.setText("+  Add alarm"); add.setOnClickListener(v -> chooseTime(null)); root.addView(add);
         ScrollView scroll = new ScrollView(this); rows = new LinearLayout(this); rows.setOrientation(LinearLayout.VERTICAL); scroll.addView(rows); root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1)); setContentView(root);
         refresh();
