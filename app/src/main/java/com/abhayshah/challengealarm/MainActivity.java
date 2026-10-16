@@ -13,6 +13,9 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Switch;
+import android.graphics.Typeface;
+import android.text.format.DateUtils;
 import java.text.DateFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,11 +27,13 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(24), dp(24), dp(24), dp(16)); root.setBackgroundColor(0xff101214);
-        TextView title = new TextView(this); title.setText("Challenge Alarm"); title.setTextSize(28); title.setTextColor(0xfff4f4f4); title.setTypeface(null, android.graphics.Typeface.BOLD); root.addView(title);
-        status = new TextView(this); status.setTextSize(14); status.setPadding(0, dp(8), 0, dp(8)); root.addView(status);
+        getWindow().setNavigationBarColor(0xff0d0e10); getWindow().setStatusBarColor(0xff0d0e10);
+        LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(20), dp(18), dp(20), dp(12)); root.setBackgroundColor(0xff0d0e10);
+        TextView eyebrow = label("WAKE ON PURPOSE", 11, 0xffff8063, true); eyebrow.setLetterSpacing(.16f); root.addView(eyebrow);
+        TextView title = label("Alarms", 38, 0xfff7f4ee, true); title.setPadding(0, dp(3), 0, 0); root.addView(title);
+        status = label("", 15, 0xffaaa9ad, false); status.setPadding(0, dp(6), 0, dp(16)); root.addView(status);
         UpdateManager.attach(this, root);
-        Button add = new Button(this); add.setText("+  Add alarm"); add.setOnClickListener(v -> chooseTime(null)); root.addView(add);
+        Button add = new Button(this); add.setText("Add alarm"); add.setTextSize(16); add.setTextColor(0xff111114); add.setBackgroundResource(R.drawable.bg_primary); add.setOnClickListener(v -> chooseTime(null)); LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, dp(58)); ap.setMargins(0, 0, 0, dp(14)); root.addView(add, ap);
         ScrollView scroll = new ScrollView(this); rows = new LinearLayout(this); rows.setOrientation(LinearLayout.VERTICAL); scroll.addView(rows); root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1)); setContentView(root);
         refresh();
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
@@ -40,14 +45,23 @@ public class MainActivity extends Activity {
     private void refresh() {
         rows.removeAllViews();
         List<AlarmItem> alarms = AlarmStore.all(this);
-        status.setText(alarms.isEmpty() ? "Set a time and solve a quick math problem to dismiss."
-                : (!AlarmStore.canSchedule(this) ? "Allow exact alarm access in Settings to schedule alarms." : "Your alarms"));
+        long now = System.currentTimeMillis(), next = Long.MAX_VALUE; int enabled = 0;
+        for (AlarmItem alarm : alarms) if (alarm.enabled) { enabled++; next = Math.min(next, AlarmStore.nextTime(alarm, now)); }
+        status.setText(!AlarmStore.canSchedule(this) ? "Exact-alarm access is off. Tap here to fix it."
+                : enabled == 0 ? "No alarms armed. Your mornings are currently unsupervised."
+                : enabled + (enabled == 1 ? " alarm armed" : " alarms armed") + "  ·  Next " + DateUtils.getRelativeTimeSpanString(next, now, DateUtils.MINUTE_IN_MILLIS));
+        status.setOnClickListener(v -> { if (!AlarmStore.canSchedule(this)) startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)); });
+        if (alarms.isEmpty()) {
+            LinearLayout empty = new LinearLayout(this); empty.setOrientation(LinearLayout.VERTICAL); empty.setGravity(Gravity.CENTER); empty.setPadding(dp(22), dp(48), dp(22), dp(48)); empty.setBackgroundResource(R.drawable.bg_card); rows.addView(empty);
+            TextView emptyTitle = label("Nothing between you and oversleeping", 20, 0xfff7f4ee, true); emptyTitle.setGravity(Gravity.CENTER); empty.addView(emptyTitle);
+            TextView emptyBody = label("Add one alarm. When it rings, solve the math and get up.", 14, 0xff96979d, false); emptyBody.setGravity(Gravity.CENTER); emptyBody.setPadding(0, dp(10), 0, 0); empty.addView(emptyBody); return;
+        }
         for (AlarmItem alarm : alarms) {
-            LinearLayout card = new LinearLayout(this); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(14), dp(9), dp(10), dp(9)); card.setBackgroundColor(0xff202528); LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1, -2); cp.setMargins(0, dp(6), 0, dp(6)); rows.addView(card, cp);
+            LinearLayout card = new LinearLayout(this); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(18), dp(15), dp(12), dp(15)); card.setBackgroundResource(R.drawable.bg_card); card.setAlpha(alarm.enabled ? 1f : .58f); LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1, -2); cp.setMargins(0, 0, 0, dp(10)); rows.addView(card, cp);
             LinearLayout info = new LinearLayout(this); info.setOrientation(LinearLayout.VERTICAL); info.setPadding(0, dp(4), 0, dp(4)); card.addView(info, new LinearLayout.LayoutParams(0, -2, 1));
-            TextView time = new TextView(this); time.setText(String.format(java.util.Locale.getDefault(), "%02d:%02d", alarm.hour, alarm.minute)); time.setTextSize(32); time.setTextColor(alarm.enabled ? 0xfff4f4f4 : 0xff888888); info.addView(time);
-            TextView days = new TextView(this); days.setText((alarm.days == 0 ? "One time" : daysText(alarm.days)) + "  ·  Math tier " + alarm.difficulty); days.setTextSize(13); days.setTextColor(0xffb8c0bc); info.addView(days);
-            Button toggle = new Button(this); toggle.setText(alarm.enabled ? "On" : "Off"); toggle.setOnClickListener(v -> { alarm.enabled = !alarm.enabled; persist(alarm); }); card.addView(toggle);
+            TextView time = label(String.format(java.util.Locale.getDefault(), "%02d:%02d", alarm.hour, alarm.minute), 38, alarm.enabled ? 0xfff7f4ee : 0xff8d8f96, true); info.addView(time);
+            TextView days = label((alarm.days == 0 ? "Once" : daysText(alarm.days)) + "  ·  Math " + difficultyName(alarm.difficulty), 13, 0xff9a9ba1, false); info.addView(days);
+            Switch toggle = new Switch(this); toggle.setChecked(alarm.enabled); toggle.setContentDescription((alarm.enabled ? "Disable" : "Enable") + " alarm at " + time.getText()); toggle.setOnCheckedChangeListener((button, checked) -> { if (checked == alarm.enabled) return; alarm.enabled = checked; persist(alarm); }); card.addView(toggle);
             card.setOnClickListener(v -> chooseTime(alarm)); card.setOnLongClickListener(v -> { new android.app.AlertDialog.Builder(this).setMessage("Delete this alarm?").setNegativeButton("Cancel", null).setPositiveButton("Delete", (d, w) -> { AlarmStore.cancel(this, alarm.id); List<AlarmItem> list = AlarmStore.all(this); list.removeIf(a -> a.id == alarm.id); AlarmStore.save(this, list); refresh(); }).show(); return true; });
         }
     }
@@ -108,6 +122,8 @@ public class MainActivity extends Activity {
     }
 
     private int nextId(List<AlarmItem> alarms) { int max = 0; for (AlarmItem a : alarms) max = Math.max(max, a.id); return max + 1; }
+    private TextView label(String text, float size, int color, boolean bold) { TextView view = new TextView(this); view.setText(text); view.setTextSize(size); view.setTextColor(color); if (bold) view.setTypeface(Typeface.create("sans", Typeface.BOLD)); return view; }
+    private static String difficultyName(int tier) { return new String[]{"very easy", "easy", "medium", "hard", "very hard"}[Math.max(1, Math.min(5, tier)) - 1]; }
     private int dp(int value) { return (int)(value * getResources().getDisplayMetrics().density + .5f); }
     static String daysText(int mask) { StringBuilder b = new StringBuilder(); for (int i = 0; i < 7; i++) if ((mask & (1 << i)) != 0) { if (b.length() > 0) b.append(" · "); b.append(DAYS[i]); } return b.toString(); }
 }

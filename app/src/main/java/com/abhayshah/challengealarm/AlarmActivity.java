@@ -6,6 +6,10 @@ import android.os.Bundle;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.view.inputmethod.EditorInfo;
+import android.view.HapticFeedbackConstants;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.Random;
 
 public class AlarmActivity extends Activity {
@@ -17,6 +21,7 @@ public class AlarmActivity extends Activity {
         else getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
         setContentView(R.layout.activity_alarm);
+        ((TextView)findViewById(R.id.ringingTime)).setText(DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date()));
         AlarmItem alarm = AlarmStore.find(this, getIntent().getIntExtra("alarmId", -1));
         tier = alarm == null ? 2 : alarm.difficulty;
         totalRounds = MathProblem.roundsForTier(tier);
@@ -26,6 +31,10 @@ public class AlarmActivity extends Activity {
             updateProgress();
         } else nextProblem();
         findViewById(R.id.dismiss).setOnClickListener(v -> checkAnswer());
+        ((EditText)findViewById(R.id.answer)).setOnEditorActionListener((v, action, event) -> {
+            if (action == EditorInfo.IME_ACTION_DONE) { checkAnswer(); return true; }
+            return false;
+        });
     }
     private void nextProblem() {
         MathProblem problem = MathProblem.generate(random, tier); answer = problem.answer;
@@ -38,10 +47,11 @@ public class AlarmActivity extends Activity {
         EditText field = findViewById(R.id.answer);
         try {
             if (Integer.parseInt(field.getText().toString().trim()) == answer) {
+                field.performHapticFeedback(HapticFeedbackConstants.CONFIRM);
                 round++; field.setText("");
                 if (round >= totalRounds) { stopService(new Intent(this, AlarmService.class).setAction(AlarmService.ACTION_STOP)); finishAndRemoveTask(); }
                 else nextProblem();
-            } else { ((TextView)findViewById(R.id.error)).setText("Not quite. Try again."); field.setText(""); }
+            } else { field.performHapticFeedback(HapticFeedbackConstants.REJECT); ((TextView)findViewById(R.id.error)).setText("Not quite. Try again."); field.setText(""); }
         } catch (NumberFormatException e) { ((TextView)findViewById(R.id.error)).setText("Enter an answer to dismiss."); }
     }
     @Override protected void onSaveInstanceState(Bundle state) {
